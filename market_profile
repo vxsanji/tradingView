@@ -1,0 +1,95 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © suho901
+//@version=5
+indicator("Intraday Market Profile | suho901", overlay=true, max_boxes_count=500, max_labels_count = 500, max_lines_count = 500)
+
+color bgColor =  input.color(color.rgb(100, 100, 100, 73), "Box Color", inline="1")
+color bgTable =  input.color(color.rgb(114, 114, 114, 50), "Table bg", inline="2")
+color txtColor =  input.color(color.rgb(210, 210, 210), "Text Color", inline="3")
+sessionTimeLo = input.session("0200-1200", title="Trading time")
+
+InSession(sessionTime, sessionTimeZone=syminfo.timezone) =>
+    not na(time(timeframe.period, sessionTime, sessionTimeZone))
+
+
+// protraction
+var weeklyHighPrice = 0.0
+var weeklyLowPrice  = 0.0
+var weeklyOpenPrice = 0.0
+var box weeklyBox = na
+var label myLabel = na
+var weeklyRange = array.new_float()
+
+//London
+var sessionHighPriceLo = 0.0
+var sessionLowPriceLo  = 0.0
+var sessionOpenPriceLo = 0.0
+var box sessionBoxLo = na
+var label myLabelLo = na
+var london = array.new_float()
+
+inSessionLo = InSession(sessionTimeLo) and timeframe.isintraday
+
+//weeklyRange
+if (hour == 0 and minute == 0 and dayofweek == dayofweek.monday)
+    weeklyHighPrice := high
+    weeklyLowPrice  := low
+    weeklyOpenPrice := open
+else if (dayofweek != dayofweek.sunday)
+    weeklyHighPrice := math.max(weeklyHighPrice, high)
+    weeklyLowPrice  := math.min(weeklyLowPrice, low)
+
+if (hour == 17 and minute == 0 and dayofweek == dayofweek.sunday)
+    array.push(id=weeklyRange, value=weeklyHighPrice-weeklyLowPrice)
+
+//london
+if (hour == 2 and minute == 0)
+    sessionHighPriceLo := high
+    sessionLowPriceLo  := low
+    sessionOpenPriceLo := open
+    sessionBoxLo := box.new(left=bar_index, top=na, right=na, bottom=na, border_width = 0)
+    myLabelLo := label.new(x=bar_index, y=na, color=color.rgb(137, 194, 188, 73), textcolor=txtColor, style=label.style_label_down, size=size.small)
+else if inSessionLo
+    sessionHighPriceLo := math.max(sessionHighPriceLo, high)
+    sessionLowPriceLo  := math.min(sessionLowPriceLo, low)
+    box.set_top(sessionBoxLo, sessionHighPriceLo)
+    box.set_bottom(sessionBoxLo, sessionLowPriceLo)
+    box.set_right(sessionBoxLo, bar_index + 1)
+    box.set_bgcolor(sessionBoxLo, bgColor)
+    label.set_xy(id=myLabelLo, x = bar_index, y= sessionHighPriceLo)
+    label.set_text(id=myLabelLo, text=str.tostring(sessionHighPriceLo-sessionLowPriceLo))
+
+
+if(hour == 12 and minute == 0)
+    array.push(id=london, value=sessionHighPriceLo-sessionLowPriceLo)
+
+Truncate(number, decimals) =>
+    factor = math.pow(10, decimals)
+    int(number * factor) / factor
+
+printDebug(txt) => 
+    var table t = table.new(position.bottom_right, 1, 1),table.cell(t, 0, 0, str.tostring(txt), bgcolor = color.yellow)
+
+var testTable = table.new(position = position.top_right, columns = 2, rows = 6, bgcolor = bgTable, border_width = 1)
+if barstate.islast
+    var weeklyCeil = array.new_float()
+    var londonCeil = array.new_float()
+    for [index, value] in weeklyRange
+        array.push(id=weeklyCeil, value=math.ceil(value))
+    for [index, value] in london
+        array.push(id=londonCeil, value=math.ceil(value))
+    
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 0, row = 0, text_color=txtColor, text = "WEEKLY")
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 0, row = 1, text_color=txtColor, text = "Avg. " + str.tostring(Truncate(array.avg(weeklyRange), 5)))
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 0, row = 2, text_color=txtColor, text = "Max. " + str.tostring(array.max(weeklyRange)))
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 0, row = 3, text_color=txtColor, text = "Min. " + str.tostring(array.min(weeklyRange)))
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 0, row = 4, text_color=txtColor, text = "Median. " + str.tostring(array.median(weeklyRange)))
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 0, row = 5, text_color=txtColor, text = "Days. " + str.tostring(array.size(weeklyCeil)))
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 1, row = 0, text_color=txtColor, text = "DAILY")
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 1, row = 1, text_color=txtColor, text = "Avg. " + str.tostring(Truncate(array.avg(london), 5)))
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 1, row = 2, text_color=txtColor, text = "Max. " + str.tostring(array.max(london)))
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 1, row = 3, text_color=txtColor, text = "Min. " + str.tostring(array.min(london)))
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 1, row = 4, text_color=txtColor, text = "Median. " + str.tostring(array.median(london)))
+    table.cell(table_id = testTable, text_halign = text.align_left, text_size = size.small, column = 1, row = 5, text_color=txtColor, text = "Days. " + str.tostring(array.size(londonCeil)))
+
+    // printDebug(weeklyRange)
