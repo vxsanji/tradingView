@@ -1,0 +1,101 @@
+//@version=5
+indicator("CBDR, Asian Range, & Flout", overlay=true, max_lines_count = 500, max_boxes_count = 500)
+color asiaColor =  input.color(color.rgb(255, 255, 255, 100), "Box Color", inline="1")
+color borderColor =  input.color(color.rgb(0, 0, 0, 74), "Border Color", inline="1")
+sessionTime = input.session("1400-2000", title="CDDR Session time")
+asianSessionTime = input.session("2000-0000", title="Asian Session time")
+color tdoColor =  input.color(color.rgb(127, 37, 160, 67), "TDO", inline="1")
+color weeklyOpenColor =  input.color(color.rgb(181, 9, 9, 35), "TDO", inline="1")
+
+if (dayofweek==dayofweek.sunday and hour == 17 and minute == 0)
+    line.new(bar_index, low, bar_index, high, extend=extend.both, color=weeklyOpenColor, width=1)
+
+if (hour== 0 and minute == 0)
+    line.new(bar_index, low, bar_index, high, extend=extend.both, color=tdoColor, width=1)
+
+
+var sessionHighPrice = 0.0
+var sessionLowPrice  = 0.0
+var sessionOpenPrice = 0.0
+var box sessionBox = na
+InSession(sessionTime, sessionTimeZone=syminfo.timezone) =>
+    not na(time(timeframe.period, sessionTime, sessionTimeZone))
+
+inSession = InSession(sessionTime) and timeframe.isintraday
+
+if (hour == 14 and minute == 0)
+    sessionHighPrice := high
+    sessionLowPrice  := open
+    sessionOpenPrice := open
+else if inSession
+    sessionHighPrice := math.max(sessionHighPrice, high)
+    sessionLowPrice  := math.min(sessionLowPrice, low)
+
+if (hour == 14 and minute == 0)
+    sessionBox := box.new(left=bar_index, top=na, right=na, bottom=na, border_width=1)
+if inSession
+    var cbdrRange = sessionHighPrice - sessionLowPrice
+    box.set_top(sessionBox, sessionHighPrice)
+    box.set_bottom(sessionBox, sessionLowPrice)
+    box.set_right(sessionBox, bar_index + 1)
+    box.set_bgcolor(sessionBox, asiaColor)
+    box.set_border_color(sessionBox, borderColor)
+
+
+
+color floutColor =  input.color(color.rgb(167, 187, 215, 67), "Flout Color", inline="2")
+floutTimeRange = input.session("1400-0000", title="Flout time")
+
+var floutHighPrice = 0.0
+var floutLowPrice  = 0.0
+var floutOpenPrice = 0.0
+var box floutBox = na
+Inflout(floutTime, floutTimeZone=syminfo.timezone) =>
+    not na(time(timeframe.period, floutTime, floutTimeZone))
+
+inflout = Inflout(floutTimeRange) and timeframe.isintraday
+
+if (hour == 14 and minute == 0)
+    floutHighPrice := high
+    floutLowPrice  := open
+    floutOpenPrice := open
+else if inflout
+    floutHighPrice := math.max(floutHighPrice, high)
+    floutLowPrice  := math.min(floutLowPrice, low)
+
+if (hour == 14 and minute == 0)
+    floutBox := box.new(left=bar_index, top=na, right=na, bottom=na, border_width=0)
+if inflout
+    box.set_top(floutBox, floutHighPrice)
+    box.set_bottom(floutBox, floutLowPrice)
+
+    box.set_right(floutBox, bar_index + 1)
+    box.set_bgcolor(floutBox, floutColor)
+
+
+
+var asianSessionHighPrice = 0.0
+var asianSessionLowPrice  = 0.0
+var asianSessionOpenPrice = 0.0
+var box asianSessionBox = na
+InAsianSession(asianSessionTime, sessionTimeZone=syminfo.timezone) =>
+    not na(time(timeframe.period, asianSessionTime, sessionTimeZone))
+
+inAsianSession = InAsianSession(asianSessionTime) and timeframe.isintraday
+
+if (hour == 20 and minute == 0)
+    asianSessionHighPrice := high
+    asianSessionLowPrice  := open
+    asianSessionOpenPrice := open
+else if inAsianSession
+    asianSessionHighPrice := math.max(asianSessionHighPrice, high)
+    asianSessionLowPrice  := math.min(asianSessionLowPrice, low)
+
+if (hour == 20 and minute == 0)
+    asianSessionBox := box.new(left=bar_index, top=na, right=na, bottom=na, border_width=1)
+if inAsianSession
+    box.set_top(asianSessionBox, asianSessionHighPrice)
+    box.set_bottom(asianSessionBox, asianSessionLowPrice)
+    box.set_right(asianSessionBox, bar_index + 1)
+    box.set_bgcolor(asianSessionBox, asiaColor)
+    box.set_border_color(asianSessionBox, borderColor)
